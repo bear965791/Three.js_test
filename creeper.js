@@ -10,8 +10,17 @@ function init(){
     0.1,
     1000
   )
+
   camera.position.set(30, 20, 10)
   camera.lookAt(scene.position)
+
+  stats = initStats()
+
+// 建立 OrbitControls
+cameraControl = new OrbitControls(camera, renderer.domElement)
+cameraControl.enableDamping = true // 啟用阻尼效果
+cameraControl.dampingFactor = 0.25 // 阻尼系數
+// cameraControl.autoRotate = true // 啟用自動旋轉
    // 三軸座標輔助
    let axes = new THREE.AxesHelper(20)
    scene.add(axes)
@@ -19,10 +28,12 @@ function init(){
   renderer = new THREE.WebGLRenderer()
   renderer.setSize(window.innerWidth, window.innerHeight)
     // 簡單的地板
-  const planeGeometry = new THREE.PlaneGeometry(60, 60)
+  const planeGeometry = new THREE.PlaneGeometry(60, 60) //PlaneGeometry 預設是在 z = 0 的 x-y 平面上
   const planeMaterial = new THREE.MeshLambertMaterial({ color: 0xffffff })
   let plane = new THREE.Mesh(planeGeometry, planeMaterial)
-  plane.rotation.x = -0.5 * Math.PI // 使平面與 y 軸垂直，並讓正面朝上
+  //只有平面體的前側會反射光線，也就是朝向 z 軸正向的方向，
+  //因此為了達到預期的讓此平面呈現為 y = 0 的 x-z 平面且可以反射光線，需要將平面體「沿著 x 軸正方向逆時針旋轉 90 度」。
+  plane.rotation.x = -0.5 * Math.PI // 使平面與 y 軸垂直，並讓正面朝上(沿著 x 軸正方向逆時針轉 90 度)
   plane.position.set(0, -7, 0)
   scene.add(plane)
   // 產生苦力怕
@@ -41,8 +52,16 @@ function init(){
 }
 
 function render() {
-  requestAnimationFrame(render)
-  renderer.render(scene, camera)
+	requestAnimationFrame(render)
+	cameraControl.update() // 需設定 update
+	renderer.render(scene, camera)
+}
+
+function initStats() {
+  const stats = new Stats()
+  stats.setMode(0)
+  document.getElementById('stats').appendChild(stats.domElement)
+  return stats
 }
 
   // 生成苦力怕並加到場景
