@@ -1,9 +1,9 @@
 let scene, renderer, camera
 let cube
-  
-function init(){
+
+function init() {
   scene = new THREE.Scene()
-  // 相機設定與 OrbitControls
+  // 相機設定與 OrbitControls
   camera = new THREE.PerspectiveCamera(
     60,
     window.innerWidth / window.innerHeight,
@@ -16,18 +16,20 @@ function init(){
 
   stats = initStats()
 
-// 建立 OrbitControls
-cameraControl = new OrbitControls(camera, renderer.domElement)
-cameraControl.enableDamping = true // 啟用阻尼效果
-cameraControl.dampingFactor = 0.25 // 阻尼系數
-// cameraControl.autoRotate = true // 啟用自動旋轉
-   // 三軸座標輔助
-   let axes = new THREE.AxesHelper(20)
-   scene.add(axes)
-     // 渲染器設定
+  // 渲染器設定
   renderer = new THREE.WebGLRenderer()
   renderer.setSize(window.innerWidth, window.innerHeight)
-    // 簡單的地板
+
+  // 建立 OrbitControls
+  controls = new THREE.OrbitControls(camera, renderer.domElement); 
+  cameraControl.enableDamping = true // 啟用阻尼效果
+  cameraControl.dampingFactor = 0.25 // 阻尼系數
+  // cameraControl.autoRotate = true // 啟用自動旋轉
+  // 三軸座標輔助
+  let axes = new THREE.AxesHelper(20)
+  scene.add(axes)
+
+  // 簡單的地板
   const planeGeometry = new THREE.PlaneGeometry(60, 60) //PlaneGeometry 預設是在 z = 0 的 x-y 平面上
   const planeMaterial = new THREE.MeshLambertMaterial({ color: 0xffffff })
   let plane = new THREE.Mesh(planeGeometry, planeMaterial)
@@ -52,9 +54,9 @@ cameraControl.dampingFactor = 0.25 // 阻尼系數
 }
 
 function render() {
-	requestAnimationFrame(render)
-	cameraControl.update() // 需設定 update
-	renderer.render(scene, camera)
+  requestAnimationFrame(render)
+  cameraControl.update() // 需設定 update
+  renderer.render(scene, camera)
 }
 
 function initStats() {
@@ -64,7 +66,7 @@ function initStats() {
   return stats
 }
 
-  // 生成苦力怕並加到場景
+// 生成苦力怕並加到場景
 function createCreeper() {
   const creeperObj = new Creeper()
   scene.add(creeperObj.creeper)
@@ -113,7 +115,7 @@ class Creeper {
   }
 }
 
-window.addEventListener('resize', function() {
+window.addEventListener('resize', function () {
   camera.aspect = window.innerWidth / window.innerHeight
   camera.updateProjectionMatrix()
   renderer.setSize(window.innerWidth, window.innerHeight)
