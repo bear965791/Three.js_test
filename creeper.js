@@ -21,7 +21,7 @@ function init() {
     0.1,
     1000
   )
-  camera.position.set(30, 20, 10)
+  camera.position.set(30, 20, 30)
   camera.lookAt(scene.position)
 
   statsUI = initStats()
@@ -34,7 +34,8 @@ function init() {
   cameraControl = new THREE.OrbitControls(camera, renderer.domElement);
   cameraControl.enableDamping = true // 啟用阻尼效果
   cameraControl.dampingFactor = 0.25 // 阻尼系數 拖移旋轉時的「滑鼠靈敏度」
-  cameraControl.autoRotate = true // 啟用自動旋轉
+  // cameraControl.autoRotate = true // 啟用自動旋轉
+
   // 三軸座標輔助
   let axes = new THREE.AxesHelper(20)
   scene.add(axes)
@@ -48,15 +49,42 @@ function init() {
   plane.rotation.x = -0.5 * Math.PI // 使平面與 y 軸垂直，並讓正面朝上(沿著 x 軸正方向逆時針轉 90 度)
   plane.position.set(0, -7, 0)
   scene.add(plane)
+
   // 產生苦力怕
   createCreeper()
 
   // 簡單的 spotlight 照亮物體
+  // 設置聚光燈 SpotLight
   let spotLight = new THREE.SpotLight(0xffffff)
-  spotLight.position.set(30, 20, 0)
+  spotLight.position.set(15, 10, 20)
+  spotLight.castShadow = true
+  spotLight.intensity = 2
   scene.add(spotLight)
-  // let spotHelper = new THREE.SpotLightHelper(spotLight)
-  // scene.add(spotHelper)
+  let spotLightHelper = new THREE.SpotLightHelper(spotLight)
+  scene.add(spotLightHelper)
+
+
+  // 設置環境光 AmbientLight
+  let ambientLight = new THREE.AmbientLight(0xffffff)
+  // scene.add(ambientLight)
+
+  // 設置點光源 PointLight
+  let pointLight = new THREE.PointLight(0xffffff)
+  pointLight.position.set(-10, 20, 20)
+  pointLight.castShadow = true
+  // scene.add(pointLight)
+  let pointLightHelper = new THREE.PointLightHelper(pointLight)
+  // scene.add(pointLightHelper)
+
+  // 設置平行光 DirectionalLight
+  let directionalLight = new THREE.DirectionalLight(0xffffff)
+  directionalLight.position.set(-10, 20, 20)
+  directionalLight.castShadow = true
+  // scene.add(directionalLight)
+  let directionalLightHelper = new THREE.DirectionalLightHelper(
+    directionalLight
+  )
+  // scene.add(directionalLightHelper)
 
   // 將渲染出來的畫面放到網頁上的 DOM
 
@@ -67,7 +95,7 @@ function render() {
   requestAnimationFrame(render)
   //建立 stats 物件後記得在 render() 裡做 update才會持續更新
   statsUI.update();
-  cameraControl.update() 
+  cameraControl.update()
   renderer.render(scene, camera)
 }
 
@@ -88,6 +116,7 @@ function createCreeper() {
 
 class Creeper {
   constructor() {
+
     // 宣告頭、身體、腳幾何體大小
     const headGeo = new THREE.BoxGeometry(4, 4, 4)
     const bodyGeo = new THREE.BoxGeometry(4, 8, 2)
@@ -96,16 +125,51 @@ class Creeper {
     // 馮氏材質設為綠色
     const creeperMat = new THREE.MeshPhongMaterial({ color: 0x00ff00 })
 
+    /**
+     * Texture（紋理）是 Material 中的一個屬性，是拿來作為貼圖的
+    */
+
+    // 苦力怕臉部貼圖
+    const headMap = new THREE.TextureLoader().load(
+      'https://dl.dropboxusercontent.com/s/bkqu0tty04epc46/creeper_face.png'
+    )
+    // 苦力怕皮膚貼圖
+    const skinMap = new THREE.TextureLoader().load(
+      'https://dl.dropboxusercontent.com/s/eev6wxdxfmukkt8/creeper_skin.png'
+    )
+    // 身體與腳的材質設定
+    const skinMat = new THREE.MeshStandardMaterial({
+      roughness: 1, // 粗糙度
+      metalness: 1, // 金屬感
+      transparent: true, // 透明與否
+      opacity: 0.9, // 透明度
+      side: THREE.DoubleSide, // 雙面材質
+      map: skinMap // 皮膚貼圖
+    })
+
+    // 準備頭部與臉的材質
+    // 利用一個陣列裝載六面的材質，其中試出來其中一面是苦力怕臉朝向光的方向，因此讓這面使用臉部貼圖，其他面則用皮膚貼圖
+    const headMaterials = []
+    for (let i = 0; i < 6; i++) {
+      let map
+
+      if (i === 4) map = headMap
+      else map = skinMap
+
+      headMaterials.push(new THREE.MeshStandardMaterial({ map: map }))
+    }
+
     // 頭
-    this.head = new THREE.Mesh(headGeo, creeperMat)
+    this.head = new THREE.Mesh(headGeo, headMaterials)
     this.head.position.set(0, 6, 0)
+    this.head.rotation.y = 0.5 // 稍微的擺頭
 
     // 身體
-    this.body = new THREE.Mesh(bodyGeo, creeperMat)
+    this.body = new THREE.Mesh(bodyGeo, skinMat)
     this.body.position.set(0, 0, 0)
 
     // 四隻腳
-    this.foot1 = new THREE.Mesh(footGeo, creeperMat)
+    this.foot1 = new THREE.Mesh(footGeo, skinMat)
     this.foot1.position.set(-1, -5.5, 2)
     this.foot2 = this.foot1.clone() // 剩下三隻腳都複製第一隻的 Mesh
     this.foot2.position.set(-1, -5.5, -2)
