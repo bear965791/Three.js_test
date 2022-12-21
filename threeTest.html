@@ -4,12 +4,12 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="./stats.css" />
     <title>Document</title>
 </head>
 <body>
     <div id="stats"></div>
 </body>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/96/three.min.js"></script>
 <!-- three.js源碼 -->
 <!-- <script src="./three.js"></script> -->
 <!-- <script>
@@ -22,7 +22,9 @@ document.body.appendChild( renderer.domElement );
 </script> -->
 <!-- <script src="./drawLines.js"></script> -->
 <!-- <script src="./spiningHeart.js"></script>  -->
-<script src="https://cdn.jsdelivr.net/npm/three-orbitcontrols@2.110.3/OrbitControls.min.js"></script>
+<!-- three.js跟OrbitControls.js版本一定要對上，否則OrbitControls會not defind -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script> 
+<script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script> 
 <SCript src="https://cdnjs.cloudflare.com/ajax/libs/stats.js/r16/Stats.min.js"></SCript>
 <script src="./creeper.js"></script> 
 </html>

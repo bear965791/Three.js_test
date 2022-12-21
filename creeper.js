@@ -1,30 +1,40 @@
 let scene, renderer, camera
 let cube
+let statsUI
+
+
+/**OrbitControls（軌道控制器）
+ *  調整畫面視角，透過滑鼠對畫面進行旋轉、平移、縮放的功能
+*/
+
+/**stats.js  監控性能的工具
+ * 
+ */
 
 function init() {
+  // 1.建場景
   scene = new THREE.Scene()
-  // 相機設定與 OrbitControls
+  // 2.相機設定
   camera = new THREE.PerspectiveCamera(
     60,
     window.innerWidth / window.innerHeight,
     0.1,
     1000
   )
-
   camera.position.set(30, 20, 10)
   camera.lookAt(scene.position)
 
-  stats = initStats()
+  statsUI = initStats()
 
-  // 渲染器設定
+  // 3.渲染器設定
   renderer = new THREE.WebGLRenderer()
   renderer.setSize(window.innerWidth, window.innerHeight)
 
-  // 建立 OrbitControls
-  controls = new THREE.OrbitControls(camera, renderer.domElement); 
+  // 設定 OrbitControls
+  cameraControl = new THREE.OrbitControls(camera, renderer.domElement);
   cameraControl.enableDamping = true // 啟用阻尼效果
-  cameraControl.dampingFactor = 0.25 // 阻尼系數
-  // cameraControl.autoRotate = true // 啟用自動旋轉
+  cameraControl.dampingFactor = 0.25 // 阻尼系數 拖移旋轉時的「滑鼠靈敏度」
+  cameraControl.autoRotate = true // 啟用自動旋轉
   // 三軸座標輔助
   let axes = new THREE.AxesHelper(20)
   scene.add(axes)
@@ -55,12 +65,16 @@ function init() {
 
 function render() {
   requestAnimationFrame(render)
-  cameraControl.update() // 需設定 update
+  //建立 stats 物件後記得在 render() 裡做 update才會持續更新
+  statsUI.update();
+  cameraControl.update() 
   renderer.render(scene, camera)
 }
 
 function initStats() {
   const stats = new Stats()
+  // 0 ，會顯示「畫面刷新頻率（FPS）」，
+  // 設成 1 的話，就會轉換為「畫面渲染時間」。
   stats.setMode(0)
   document.getElementById('stats').appendChild(stats.domElement)
   return stats
