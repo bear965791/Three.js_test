@@ -1,10 +1,13 @@
 let scene, renderer, camera
 let statsUI
-let cameraControl, stats
+let cameraControl, stats, gui
 let creeperObj
 let sphereLightMesh, pointLight
 let rotateAngle = 0
 let invert = 1
+let rotateHeadOffset = 0
+let walkOffset = 0
+let scaleHeadOffset = 0
 
 /**OrbitControls（軌道控制器）
  *  調整畫面視角，透過滑鼠對畫面進行旋轉、平移、縮放的功能
@@ -24,7 +27,7 @@ function init() {
     0.1,
     1000
   )
-  camera.position.set(30, 20, 30)
+  camera.position.set(50, 50, 50)
   camera.lookAt(scene.position)
 
   statsUI = initStats()
@@ -51,7 +54,7 @@ function init() {
   scene.add(axes)
 
   // 簡單的地板
-  const planeGeometry = new THREE.PlaneGeometry(60, 60) //PlaneGeometry 預設是在 z = 0 的 x-y 平面上
+  const planeGeometry = new THREE.PlaneGeometry(80, 60) //PlaneGeometry 預設是在 z = 0 的 x-y 平面上
   const planeMaterial = new THREE.MeshLambertMaterial({ color: 0xffffff })
   let plane = new THREE.Mesh(planeGeometry, planeMaterial)
   //只有平面體的前側會反射光線，也就是朝向 z 軸正向的方向，
@@ -59,6 +62,7 @@ function init() {
   plane.rotation.x = -0.5 * Math.PI // 使平面與 y 軸垂直，並讓正面朝上(沿著 x 軸正方向逆時針轉 90 度)
   plane.position.set(0, -7, 0)
   plane.receiveShadow = true //這個屬性打開才會接收其他元素投影的效果。
+  plane.name = 'floor'
   scene.add(plane)
 
   // 產生苦力怕
@@ -69,9 +73,9 @@ function init() {
   let spotLight = new THREE.SpotLight(0xf0f0f0)
   spotLight.position.set(-10, 30, 20)
   spotLight.castShadow = true
-  spotLight.intensity = 2
-  // scene.add(spotLight)
-  let spotLightHelper = new THREE.SpotLightHelper(spotLight)
+  spotLight.intensity = 0.5
+  scene.add(spotLight)
+  // let spotLightHelper = new THREE.SpotLightHelper(spotLight)
   // scene.add(spotLightHelper)
 
   // 設置環境光 AmbientLight
@@ -84,7 +88,7 @@ function init() {
   pointLight.castShadow = true
   scene.add(pointLight)
   let pointLightHelper = new THREE.PointLightHelper(pointLight)
-  // scene.add(pointLightHelper)
+  scene.add(pointLightHelper)
 
   // 小球體模擬點光源實體
   const sphereLightGeo = new THREE.SphereGeometry(0.3)
@@ -104,6 +108,18 @@ function init() {
   )
   // scene.add(directionalLightHelper)
 
+   // dat.GUI 控制面板
+   gui = new dat.GUI()
+   gui.add(datGUIControls, 'startRotateHead').onChange(function(e) {
+     startRotateHead = e
+   })
+   gui.add(datGUIControls, 'startWalking').onChange(function(e) {
+     startWalking = e
+   })
+   gui.add(datGUIControls, 'startScaleBody').onChange(function(e) {
+     startScaleBody = e
+   })
+
   // 將渲染出來的畫面放到網頁上的 DOM
   document.body.appendChild(renderer.domElement)
 }
@@ -119,6 +135,7 @@ function pointLightAnimation() {
   // 光源延橢圓軌道繞 Y 軸旋轉
   sphereLightMesh.position.x = 4 * Math.cos(rotateAngle)
   sphereLightMesh.position.z = 4 * Math.sin(rotateAngle)
+  
   // 點光源位置與球體同步
   pointLight.position.copy(sphereLightMesh.position)
 }
@@ -129,6 +146,11 @@ function render() {
   //先在 Init() 中宣告點光源與模擬光源實體的小球體到場景中，
   //再來要讓小球移動的話就需要在 render() 中加上動畫效果：
   pointLightAnimation() // update
+  creeperHeadRotate()
+  creeperFeetWalk()
+  creeperScaleBody()
+  //每 16.67ms（60 fps） 就執行一次 render()
+  //因此我們能透過在 render() 中更改物體的位置、旋轉、縮放、材質、形狀等等來達到動畫的效果
   requestAnimationFrame(render)
   cameraControl.update()
   renderer.render(scene, camera)
@@ -145,8 +167,37 @@ function initStats() {
 
 // 生成苦力怕並加到場景
 function createCreeper() {
-  const creeperObj = new Creeper()
+  creeperObj = new Creeper()
   scene.add(creeperObj.creeper)
+}
+
+let datGUIControls = new (function() {
+  this.startRotateHead = false
+  this.startWalking = false
+  this.startScaleBody = false
+})()
+
+// 苦力怕擺頭
+function creeperHeadRotate() {
+  rotateHeadOffset += 0.04
+  creeperObj.head.rotation.y = Math.sin(rotateHeadOffset)
+}
+
+// 苦力怕走動
+function creeperFeetWalk() {
+  walkOffset += 0.04
+  
+  creeperObj.foot1.rotation.x = Math.sin(walkOffset) / 4 // 前腳左
+  creeperObj.foot2.rotation.x = -Math.sin(walkOffset) / 4 // 後腳左
+  creeperObj.foot3.rotation.x = -Math.sin(walkOffset) / 4 // 前腳右
+  creeperObj.foot4.rotation.x = Math.sin(walkOffset) / 4 // 後腳右
+}
+
+// 苦力怕膨脹
+function creeperScaleBody() {
+  scaleHeadOffset += 0.04
+  let scaleRate = Math.abs(Math.sin(scaleHeadOffset)) / 16 + 1
+  creeperObj.creeper.scale.set(scaleRate, scaleRate, scaleRate)
 }
 
 class Creeper {
