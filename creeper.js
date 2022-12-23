@@ -1,7 +1,10 @@
 let scene, renderer, camera
-let cube
 let statsUI
-
+let cameraControl, stats
+let creeperObj
+let sphereLightMesh, pointLight
+let rotateAngle = 0
+let invert = 1
 
 /**OrbitControls（軌道控制器）
  *  調整畫面視角，透過滑鼠對畫面進行旋轉、平移、縮放的功能
@@ -29,7 +32,14 @@ function init() {
   // 3.渲染器設定
   renderer = new THREE.WebGLRenderer()
   renderer.setSize(window.innerWidth, window.innerHeight)
-
+  renderer.shadowMap.enabled = true // 設定需渲染陰影效果
+  /**
+   * 而另外一個 renderer.shadowMap.type 是設定陰影貼圖的種類，總共有三種可以設定：
+     THREE.BasicShadowMap = 0
+     THREE.PCFShadowMap = 1
+     THREE.PCFSoftShadowMap = 2
+   */
+  renderer.shadowMap.type = 2 // THREE.PCFSoftShadowMap
   // 設定 OrbitControls
   cameraControl = new THREE.OrbitControls(camera, renderer.domElement);
   cameraControl.enableDamping = true // 啟用阻尼效果
@@ -48,6 +58,7 @@ function init() {
   //因此為了達到預期的讓此平面呈現為 y = 0 的 x-z 平面且可以反射光線，需要將平面體「沿著 x 軸正方向逆時針旋轉 90 度」。
   plane.rotation.x = -0.5 * Math.PI // 使平面與 y 軸垂直，並讓正面朝上(沿著 x 軸正方向逆時針轉 90 度)
   plane.position.set(0, -7, 0)
+  plane.receiveShadow = true //這個屬性打開才會接收其他元素投影的效果。
   scene.add(plane)
 
   // 產生苦力怕
@@ -55,26 +66,33 @@ function init() {
 
   // 簡單的 spotlight 照亮物體
   // 設置聚光燈 SpotLight
-  let spotLight = new THREE.SpotLight(0xffffff)
-  spotLight.position.set(15, 10, 20)
+  let spotLight = new THREE.SpotLight(0xf0f0f0)
+  spotLight.position.set(-10, 30, 20)
   spotLight.castShadow = true
   spotLight.intensity = 2
-  scene.add(spotLight)
+  // scene.add(spotLight)
   let spotLightHelper = new THREE.SpotLightHelper(spotLight)
-  scene.add(spotLightHelper)
-
+  // scene.add(spotLightHelper)
 
   // 設置環境光 AmbientLight
-  let ambientLight = new THREE.AmbientLight(0xffffff)
-  // scene.add(ambientLight)
+  let ambientLight = new THREE.AmbientLight(0x404040)
+  scene.add(ambientLight)
 
-  // 設置點光源 PointLight
-  let pointLight = new THREE.PointLight(0xffffff)
-  pointLight.position.set(-10, 20, 20)
+  // 設置移動點光源 PointLight
+  pointLight = new THREE.PointLight(0xccffcc, 1, 100) // 顏色, 強度, 距離
+  //pointLight.position.set(-10, 20, 20)
   pointLight.castShadow = true
-  // scene.add(pointLight)
+  scene.add(pointLight)
   let pointLightHelper = new THREE.PointLightHelper(pointLight)
   // scene.add(pointLightHelper)
+
+  // 小球體模擬點光源實體
+  const sphereLightGeo = new THREE.SphereGeometry(0.3)
+  const sphereLightMat = new THREE.MeshBasicMaterial({ color: 0xccffcc })
+  sphereLightMesh = new THREE.Mesh(sphereLightGeo, sphereLightMat)
+  sphereLightMesh.castShadow = true
+  sphereLightMesh.position.y = 16
+  scene.add(sphereLightMesh)
 
   // 設置平行光 DirectionalLight
   let directionalLight = new THREE.DirectionalLight(0xffffff)
@@ -87,14 +105,31 @@ function init() {
   // scene.add(directionalLightHelper)
 
   // 將渲染出來的畫面放到網頁上的 DOM
-
   document.body.appendChild(renderer.domElement)
 }
 
+// 點光源繞 Y 軸旋轉動畫
+function pointLightAnimation() {
+  if (rotateAngle > 2 * Math.PI) {
+    rotateAngle = 0 // 超過 360 度後歸零
+  } else {
+    rotateAngle += 0.04 // 遞增角度
+  }
+
+  // 光源延橢圓軌道繞 Y 軸旋轉
+  sphereLightMesh.position.x = 4 * Math.cos(rotateAngle)
+  sphereLightMesh.position.z = 4 * Math.sin(rotateAngle)
+  // 點光源位置與球體同步
+  pointLight.position.copy(sphereLightMesh.position)
+}
+
 function render() {
-  requestAnimationFrame(render)
   //建立 stats 物件後記得在 render() 裡做 update才會持續更新
   statsUI.update();
+  //先在 Init() 中宣告點光源與模擬光源實體的小球體到場景中，
+  //再來要讓小球移動的話就需要在 render() 中加上動畫效果：
+  pointLightAnimation() // update
+  requestAnimationFrame(render)
   cameraControl.update()
   renderer.render(scene, camera)
 }
@@ -190,6 +225,15 @@ class Creeper {
     this.creeper.add(this.head)
     this.creeper.add(this.body)
     this.creeper.add(this.feet)
+    // 苦力怕投影設定，利用 traverse 遍歷各個子元件設定陰影
+    // 提供一個用來遍歷目標物件（creeper）及其所有後代（head、body、feet）的方法，
+    // 透過傳入的 function，可以對苦力怕底下的所有子元件都設定陰影效果。
+    this.creeper.traverse(function (object) {
+      if (object instanceof THREE.Mesh) {
+        object.castShadow = true
+        object.receiveShadow = true
+      }
+    })
   }
 }
 
