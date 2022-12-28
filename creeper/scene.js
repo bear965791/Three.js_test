@@ -1,14 +1,16 @@
 let scene, renderer, camera
 let statsUI
-let cameraControl, stats, gui
-let creeperObj
+let cameraControl, gui
 let sphereLightMesh, pointLight
 let rotateAngle = 0
-let invert = 1
+let invert = 1 // 正反向
 let rotateHeadOffset = 0
 let walkOffset = 0
 let scaleHeadOffset = 0
-
+let creeperObj
+let stats
+let tween, tweenBack
+let startTracking = false
 /**OrbitControls（軌道控制器）
  *  調整畫面視角，透過滑鼠對畫面進行旋轉、平移、縮放的功能
 */
@@ -27,7 +29,7 @@ function init() {
     0.1,
     1000
   )
-  camera.position.set(50, 50, 50)
+  camera.position.set(20, 20, 20)
   camera.lookAt(scene.position)
 
   statsUI = initStats()
@@ -110,18 +112,141 @@ function init() {
 
    // dat.GUI 控制面板
    gui = new dat.GUI()
-   gui.add(datGUIControls, 'startRotateHead').onChange(function(e) {
-     startRotateHead = e
-   })
-   gui.add(datGUIControls, 'startWalking').onChange(function(e) {
-     startWalking = e
-   })
-   gui.add(datGUIControls, 'startScaleBody').onChange(function(e) {
-     startScaleBody = e
-   })
+   gui.add(datGUIControls, 'startTracking').onChange(function(e) {
+    startTracking = e
+    if (invert > 0) {
+      if (startTracking) {
+        tween.start()
+      } else {
+        tween.stop()
+      }
+    } else {
+      if (startTracking) {
+        tweenBack.start()
+      } else {
+        tweenBack.stop()
+      }
+    }
+  })
 
   // 將渲染出來的畫面放到網頁上的 DOM
   document.body.appendChild(renderer.domElement)
+}
+
+function createCreeper() {
+  creeperObj = new Creeper()
+  tweenHandler()
+  scene.add(creeperObj.creeper)
+}
+
+function render() {
+  //建立 stats 物件後記得在 render() 裡做 update才會持續更新
+  statsUI.update();
+  //先在 Init() 中宣告點光源與模擬光源實體的小球體到場景中，
+  //再來要讓小球移動的話就需要在 render() 中加上動畫效果：
+  // pointLightAnimation() // update
+  // creeperHeadRotate()
+  // creeperFeetWalk()
+  // creeperScaleBody()
+  //每 16.67ms（60 fps） 就執行一次 render()
+  //因此我們能透過在 render() 中更改物體的位置、旋轉、縮放、材質、形狀等等來達到動畫的效果
+  cameraControl.update()
+  creeperFeetWalk()
+  TWEEN.update()
+  requestAnimationFrame(render)
+  renderer.render(scene, camera)
+}
+
+function initStats() {
+  const stats = new Stats()
+  // 0 ，會顯示「畫面刷新頻率（FPS）」，
+  // 設成 1 的話，就會轉換為「畫面渲染時間」。
+  stats.setMode(0)
+  document.getElementById('stats').appendChild(stats.domElement)
+  return stats
+}
+
+let datGUIControls = new (function() {
+  // this.startRotateHead = false
+  // this.startWalking = false
+  // this.startScaleBody = false
+  this.startTracking = false
+})
+
+/**
+ * 動畫相關
+*/
+
+function tweenHandler() {
+  let offset = { x: 0, z: 0, rotateY: 0 }
+  let target = { x: 20, z: 20, rotateY: 0.7853981633974484 } // 目標值
+
+  // 苦力怕走動及轉身補間動畫
+  const onUpdate = () => {
+    // 移動
+    creeperObj.feet.position.x = offset.x
+    creeperObj.feet.position.z = offset.z
+    creeperObj.head.position.x = offset.x
+    creeperObj.head.position.z = offset.z
+    creeperObj.body.position.x = offset.x
+    creeperObj.body.position.z = offset.z
+
+    // 轉身
+    if (target.x > 0) {
+      creeperObj.feet.rotation.y = offset.rotateY
+      creeperObj.head.rotation.y = offset.rotateY
+      creeperObj.body.rotation.y = offset.rotateY
+    } else {
+      creeperObj.feet.rotation.y = -offset.rotateY
+      creeperObj.head.rotation.y = -offset.rotateY
+      creeperObj.body.rotation.y = -offset.rotateY
+    }
+  }
+
+  // 計算新的目標值
+  const handleNewTarget = () => {
+    // 限制苦力怕走路邊界
+    if (camera.position.x > 30) target.x = 20
+    else if (camera.position.x < -30) target.x = -20
+    else target.x = camera.position.x
+    if (camera.position.z > 30) target.z = 20
+    else if (camera.position.z < -30) target.z = -20
+    else target.z = camera.position.z
+
+    const v1 = new THREE.Vector2(0, 1) // 原點面向方向
+    const v2 = new THREE.Vector2(target.x, target.z) // 苦力怕面向新相機方向
+
+    // 內積除以純量得兩向量 cos 值
+    let cosValue = v1.dot(v2) / (v1.length() * v2.length())
+
+    // 防呆，cos 值區間為（-1, 1）
+    if (cosValue > 1) cosValue = 1
+    else if (cosValue < -1) cosValue = -1
+
+    // cos 值求轉身角度
+    target.rotateY = Math.acos(cosValue)
+  }
+
+  // 朝相機移動
+  tween = new TWEEN.Tween(offset)
+    .to(target, 3000)
+    .easing(TWEEN.Easing.Quadratic.Out)
+    .onUpdate(onUpdate)
+    .onComplete(() => {
+      invert = -1
+      tweenBack.start()
+    })
+
+  // 回原點
+  tweenBack = new TWEEN.Tween(offset)
+    .to({ x: 0, z: 0, rotateY: 0 }, 3000)
+    .easing(TWEEN.Easing.Quadratic.Out)
+    .onUpdate(onUpdate)
+    .onComplete(() => {
+      handleNewTarget() // 計算新的目標值
+      invert = 1
+      tween.start()
+    })
 }
 
 // 點光源繞 Y 軸旋轉動畫
@@ -139,43 +264,6 @@ function pointLightAnimation() {
   // 點光源位置與球體同步
   pointLight.position.copy(sphereLightMesh.position)
 }
-
-function render() {
-  //建立 stats 物件後記得在 render() 裡做 update才會持續更新
-  statsUI.update();
-  //先在 Init() 中宣告點光源與模擬光源實體的小球體到場景中，
-  //再來要讓小球移動的話就需要在 render() 中加上動畫效果：
-  pointLightAnimation() // update
-  creeperHeadRotate()
-  creeperFeetWalk()
-  creeperScaleBody()
-  //每 16.67ms（60 fps） 就執行一次 render()
-  //因此我們能透過在 render() 中更改物體的位置、旋轉、縮放、材質、形狀等等來達到動畫的效果
-  requestAnimationFrame(render)
-  cameraControl.update()
-  renderer.render(scene, camera)
-}
-
-function initStats() {
-  const stats = new Stats()
-  // 0 ，會顯示「畫面刷新頻率（FPS）」，
-  // 設成 1 的話，就會轉換為「畫面渲染時間」。
-  stats.setMode(0)
-  document.getElementById('stats').appendChild(stats.domElement)
-  return stats
-}
-
-// 生成苦力怕並加到場景
-function createCreeper() {
-  creeperObj = new Creeper()
-  scene.add(creeperObj.creeper)
-}
-
-let datGUIControls = new (function() {
-  this.startRotateHead = false
-  this.startWalking = false
-  this.startScaleBody = false
-})()
 
 // 苦力怕擺頭
 function creeperHeadRotate() {
@@ -199,6 +287,10 @@ function creeperScaleBody() {
   let scaleRate = Math.abs(Math.sin(scaleHeadOffset)) / 16 + 1
   creeperObj.creeper.scale.set(scaleRate, scaleRate, scaleRate)
 }
+
+/**
+ * 苦力怕
+*/
 
 class Creeper {
   constructor() {
