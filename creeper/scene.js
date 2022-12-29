@@ -318,7 +318,6 @@ class Creeper {
     // 身體與腳的材質設定
     const skinMat = new THREE.MeshStandardMaterial({
       roughness: 1, // 粗糙度
-      metalness: 1, // 金屬感
       transparent: true, // 透明與否
       opacity: 0.9, // 透明度
       side: THREE.DoubleSide, // 雙面材質
