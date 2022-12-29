@@ -144,10 +144,11 @@ function createSnow() {
     const z = THREE.Math.randInt(-range, range)
     const v = THREE.Math.randFloat(-0.16, 0.16)
     vertices.push(x, y, z)
+    console.log(vertices)
     velocitys.push(v)
   }
-  geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3))
-
+  
+geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3))
   material = new THREE.PointsMaterial({
     size: 5,
     map: particleTexture,
